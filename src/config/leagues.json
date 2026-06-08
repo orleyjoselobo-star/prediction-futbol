@@ -1,0 +1,96 @@
+{
+  "european_leagues": [
+    {
+      "code": "PL",
+      "name": "Premier League",
+      "country": "England",
+      "total_teams": 20,
+      "season_start": "August",
+      "season_end": "May",
+      "api_id": 39
+    },
+    {
+      "code": "LA",
+      "name": "La Liga",
+      "country": "Spain",
+      "total_teams": 20,
+      "season_start": "August",
+      "season_end": "May",
+      "api_id": 140
+    },
+    {
+      "code": "SA",
+      "name": "Serie A",
+      "country": "Italy",
+      "total_teams": 20,
+      "season_start": "August",
+      "season_end": "May",
+      "api_id": 135
+    },
+    {
+      "code": "BL",
+      "name": "Bundesliga",
+      "country": "Germany",
+      "total_teams": 18,
+      "season_start": "August",
+      "season_end": "May",
+      "api_id": 78
+    },
+    {
+      "code": "FL1",
+      "name": "Ligue 1",
+      "country": "France",
+      "total_teams": 18,
+      "season_start": "August",
+      "season_end": "May",
+      "api_id": 61
+    }
+  ],
+  "colombian_leagues": [
+    {
+      "code": "CAT_A",
+      "name": "Categoría A",
+      "country": "Colombia",
+      "total_teams": 20,
+      "season_start": "January",
+      "season_end": "December",
+      "api_id": 288
+    },
+    {
+      "code": "CAT_B",
+      "name": "Categoría B",
+      "country": "Colombia",
+      "total_teams": 20,
+      "season_start": "January",
+      "season_end": "December",
+      "api_id": 289
+    }
+  ],
+  "competitions": [
+    {
+      "code": "CL",
+      "name": "UEFA Champions League",
+      "type": "Continental",
+      "api_id": 8
+    },
+    {
+      "code": "EL",
+      "name": "Europa League",
+      "type": "Continental",
+      "api_id": 88
+    },
+    {
+      "code": "COPA",
+      "name": "Copa América",
+      "type": "International",
+      "api_id": 500
+    },
+    {
+      "code": "WC2026",
+      "name": "World Cup 2026",
+      "type": "International",
+      "year": 2026,
+      "api_id": 1000
+    }
+  ]
+}
