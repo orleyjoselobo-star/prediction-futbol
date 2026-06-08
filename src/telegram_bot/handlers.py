@@ -38,20 +38,32 @@ class TelegramHandlers:
             
             # Create inline keyboard with leagues
             keyboard = []
+            fila = []
             for league_key, league_info in LEAGUES.items():
-                keyboard.append([
-                    InlineKeyboardButton(
-                        f"{league_info['name']} 🌍",
-                        callback_data=f"league_{league_key}"
-                    )
-                ])
+                boton = InlineKeyboardButton(
+                    f"{league_info['name']} 🌍",
+                    callback_data=f"league_{league_key}"
+                )
+                fila.append(boton)
+                if len(fila) == 2:
+                    keyboard.append(fila)
+                    fila = []
+            if fila:
+                keyboard.append(fila)
             
             reply_markup = InlineKeyboardMarkup(keyboard)
-            await update.message.reply_text(welcome_message, reply_markup=reply_markup)
+            
+            # Soporte dinámico si viene de comando /start o de botón para volver
+            if update.message:
+                await update.message.reply_text(welcome_message, reply_markup=reply_markup)
+            elif update.callback_query:
+                await update.callback_query.edit_message_text(welcome_message, reply_markup=reply_markup)
+                
             return SELECT_LEAGUE
         except Exception as e:
             logger.error(f"Error in start handler: {e}")
-            await update.message.reply_text("Ocurrió un error. Por favor intenta de nuevo.")
+            if update.message:
+                await update.message.reply_text("Ocurrió un error. Por favor intenta de nuevo.")
             return ConversationHandler.END
 
     async def select_league(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -59,6 +71,9 @@ class TelegramHandlers:
         try:
             query = update.callback_query
             await query.answer()
+            
+            if query.data == "back_to_start":
+                return await self.start(update, context)
             
             league_key = query.data.replace("league_", "")
             context.user_data["selected_league"] = league_key
@@ -73,7 +88,9 @@ class TelegramHandlers:
             self.matches_cache[query.from_user.id] = matches
             
             if not matches:
-                await query.edit_message_text(f"No hay partidos disponibles para {league_info.get('name')} hoy.")
+                keyboard = [[InlineKeyboardButton("⬅️ Volver al menú", callback_data="back_to_start")]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await query.edit_message_text(f"No hay partidos disponibles para {league_info.get('name')} hoy.", reply_markup=reply_markup)
                 return SELECT_LEAGUE
             
             # Show matches
@@ -93,6 +110,7 @@ class TelegramHandlers:
                     )
                 ])
             
+            keyboard.append([InlineKeyboardButton("⬅️ Volver al menú", callback_data="back_to_start")])
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.edit_message_text(message, reply_markup=reply_markup)
             return SELECT_MATCH
@@ -106,6 +124,9 @@ class TelegramHandlers:
         try:
             query = update.callback_query
             await query.answer()
+            
+            if query.data == "back_to_start":
+                return await self.start(update, context)
             
             match_idx = int(query.data.replace("match_", ""))
             user_id = query.from_user.id
@@ -151,7 +172,11 @@ class TelegramHandlers:
             if "away_win" in odds:
                 message += f"Victoria visitante: {odds['away_win'].get('odds', 'N/A')} ({odds['away_win'].get('bookmaker', 'N/A')})\n"
             
-            await query.edit_message_text(message)
+            # Agregar botón de retorno a la visualización final
+            keyboard = [[InlineKeyboardButton("🔄 Consultar otra liga / partido", callback_data="back_to_start")]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await query.edit_message_text(message, reply_markup=reply_markup)
             return SHOW_PREDICTION
         except Exception as e:
             logger.error(f"Error in select_match handler: {e}")
