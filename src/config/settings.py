@@ -1,73 +1,67 @@
-"""Configuration settings for the football prediction system."""
+"""Configuration settings for the football prediction system synchronized with your environment."""
 import os
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Load environment variables
+# Load environment variables from .env file
 load_dotenv()
 
-# Project paths
+# Project Root Paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = BASE_DIR / "data"
 MODELS_DIR = BASE_DIR / "models"
 LOGS_DIR = BASE_DIR / "logs"
 
-# Create directories if they don't exist
+# Create required infrastructure directories if they don't exist
 for directory in [DATA_DIR, MODELS_DIR, LOGS_DIR]:
     directory.mkdir(exist_ok=True)
 
-# Telegram Bot
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+# --- TELEGRAM CONFIGURATION ---
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-# APIs
-FOOTBALL_API_KEY = os.getenv("FOOTBALL_API_KEY")
-API_FOOTBALL_KEY = os.getenv("API_FOOTBALL_KEY")
+# --- GOOGLE CLOUD & FIREBASE CONFIGURATION ---
+GOOGLE_CLOUD_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
+GOOGLE_CLOUD_REGION = os.getenv("GOOGLE_CLOUD_REGION", "us-central1")
+FIREBASE_CREDENTIALS = os.getenv("FIREBASE_CREDENTIALS")
+FIREBASE_DATABASE_URL = os.getenv("FIREBASE_DATABASE_URL")
 
-# Database
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./prediction_futbol.db")
-FIRESTORE_CREDENTIALS = os.getenv("FIRESTORE_CREDENTIALS_PATH")
+# --- FOOTBALL API CONFIGURATION ---
+FOOTBALL_API_KEY = os.getenv("FOOTBALL_DATA_API_KEY")
 
-# Betting APIs
-BETING_API_KEYS = {
-    "betesporte": os.getenv("BETESPORTE_API_KEY"),
-    "pinnacle": os.getenv("PINNACLE_API_KEY"),
+# --- BETTING APIs CONFIGURATION ---
+BETTING_API_KEYS = {
+    "bet365": os.getenv("BET365_API_KEY"),
+    "bwin": os.getenv("BWIN_API_KEY"),
+    "betano": os.getenv("BETANO_API_KEY")
 }
 
-# Model settings
-MODEL_PATH = MODELS_DIR / "prediction_model.pkl"
-MODEL_VERSION = "1.0"
-MIN_PREDICTION_CONFIDENCE = 0.60
+# --- DATABASE CONFIGURATION ---
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost:5432/prediction_futbol")
 
-# League configurations
+# --- MACHINE LEARNING MODEL CONFIGURATION ---
+MODEL_PATH = BASE_DIR / os.getenv("MODEL_PATH", "models/xgboost_model.pkl")
+SCALER_PATH = BASE_DIR / os.getenv("SCALER_PATH", "models/scaler.pkl")
+MODEL_VERSION = "2.0_XGBOOST"
+MIN_PREDICTION_CONFIDENCE = 0.65
+
+# --- LEAGUE MAPPING & CODES (API-Football IDs for 2026) ---
 SUPPORTED_LEAGUES = {
-    "PL": "Premier League",
-    "LA": "La Liga",
-    "SA": "Serie A",
-    "BL": "Bundesliga",
-    "FL1": "Ligue 1",
-    "CAT_A": "Categoría A Colombia",
-    "CAT_B": "Categoría B Colombia",
-    "CL": "UEFA Champions League",
-    "WC": "World Cup 2026",
+    "PL": {"name": "Premier League", "id": 39},
+    "LA": {"name": "La Liga", "id": 140},
+    "SA": {"name": "Serie A", "id": 135},
+    "BL": {"name": "Bundesliga", "id": 78},
+    "FL1": {"name": "Ligue 1", "id": 61},
+    "CAT_A": {"name": "Categoría A Colombia", "id": 288},
+    "CAT_B": {"name": "Categoría B Colombia", "id": 289},
+    "CL": {"name": "UEFA Champions League", "id": 8},
+    "WC": {"name": "World Cup 2026", "id": 1}
 }
 
-# Features for prediction
-TARGET_FEATURES = [
-    "form_recent",
-    "head_to_head",
-    "table_position",
-    "goals_for",
-    "goals_against",
-    "current_streak",
-    "home_advantage",
-    "injuries",
-]
-
-# Logging
+# --- LOGGING CONFIGURATION ---
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-# Environment
+# --- ENVIRONMENT CONFIGURATION ---
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
