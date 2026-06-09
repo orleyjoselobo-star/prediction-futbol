@@ -28,8 +28,19 @@ class FootballDataFetcher:
         try:
             logger.info(f"Consumiendo endpoint: {endpoint} | Parámetros: {params}")
             response = requests.get(url, headers=self.headers, params=params, timeout=12)
+            
+            # Captura específica si el código de la liga no existe en el plan de la API (Evita propagar 404)
+            if response.status_code == 404:
+                logger.warning(
+                    f"La API devolvió un error 404 (No encontrado) para el endpoint [{endpoint}]. "
+                    f"Verifica que estés usando los códigos cortos de football-data.org (Ej: 'PL', 'PD', 'SA')."
+                )
+                return {"count": 0, "matches": []}
+                
+            # Lanza una excepción para otros errores HTTP (401 No Autorizado, 500 Error de Servidor, etc.)
             response.raise_for_status()
             return response.json()
+            
         except requests.exceptions.RequestException as e:
             logger.error(f"Error de conexión con la API de fútbol en el endpoint [{endpoint}]: {e}")
             return {"count": 0, "matches": []}
@@ -37,7 +48,8 @@ class FootballDataFetcher:
     def get_league_matches(self, league_code: str) -> Dict[str, Any]:
         """
         Fetches scheduled matches for a specific league code.
-        Filtra por defecto los partidos programados del día actual.
+        Filtra por defecto los partidos programados del torneo.
+        Nota: Requiere códigos oficiales de football-data.org como 'PL', 'PD', 'SA', 'CL'.
         """
         if not league_code:
             logger.warning("Se solicitó get_league_matches pero el league_code está vacío.")
@@ -46,8 +58,7 @@ class FootballDataFetcher:
         # Estructura del endpoint de football-data para partidos de una competición
         endpoint = f"competitions/{league_code}/matches"
         
-        # Opcional: Filtrar por la fecha actual o el estado 'SCHEDULED' si la API lo soporta directamente
-        # En entornos de desarrollo, si no hay partidos hoy, se puede omitir el filtro de fecha para pruebas.
+        # Filtrar por el estado 'SCHEDULED' para traer partidos que no se han jugado
         params = {
             "status": "SCHEDULED"
         }
