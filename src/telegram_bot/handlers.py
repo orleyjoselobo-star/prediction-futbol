@@ -8,7 +8,7 @@ from src.data.fetcher import FootballDataFetcher
 from src.data.processor import DataProcessor
 from src.models.predictor import MatchPredictor
 from src.api.betting_odds import BettingOddsAPI
-from src.config import LEAGUES
+from src.config.settings import SUPPORTED_LEAGUES, MIN_PREDICTION_CONFIDENCE
 from src.logger import setup_logger
 from src.utils.helpers import format_match_info
 
@@ -36,10 +36,10 @@ class TelegramHandlers:
             user = update.effective_user
             welcome_message = f"¡Hola {user.first_name}! 👋\n\nBienvenido al bot de predicción de fútbol ⚽\n\nEscoge una liga para ver los partidos del día:"
             
-            # Create inline keyboard with leagues
+            # Create inline keyboard with leagues using SUPPORTED_LEAGUES safely
             keyboard = []
             fila = []
-            for league_key, league_info in LEAGUES.items():
+            for league_key, league_info in SUPPORTED_LEAGUES.items():
                 boton = InlineKeyboardButton(
                     f"{league_info['name']} 🌍",
                     callback_data=f"league_{league_key}"
@@ -53,7 +53,7 @@ class TelegramHandlers:
             
             reply_markup = InlineKeyboardMarkup(keyboard)
             
-            # Soporte dinámico si viene de comando /start o de botón para volver
+            # Dynamic support if coming from /start command or back button
             if update.message:
                 await update.message.reply_text(welcome_message, reply_markup=reply_markup)
             elif update.callback_query:
@@ -68,8 +68,8 @@ class TelegramHandlers:
 
     async def select_league(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Handle league selection"""
+        query = update.callback_query
         try:
-            query = update.callback_query
             await query.answer()
             
             if query.data == "back_to_start":
@@ -78,7 +78,7 @@ class TelegramHandlers:
             league_key = query.data.replace("league_", "")
             context.user_data["selected_league"] = league_key
             
-            league_info = LEAGUES.get(league_key, {})
+            league_info = SUPPORTED_LEAGUES.get(league_key, {})
             
             # Fetch matches for the selected league
             league_code = league_info.get("id")
@@ -116,13 +116,14 @@ class TelegramHandlers:
             return SELECT_MATCH
         except Exception as e:
             logger.error(f"Error in select_league handler: {e}")
-            await query.edit_message_text("Ocurrió un error. Por favor intenta de nuevo.")
+            if query:
+                await query.edit_message_text("Ocurrió un error. Por favor intenta de nuevo.")
             return SELECT_LEAGUE
 
     async def select_match(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         """Handle match selection and show prediction"""
+        query = update.callback_query
         try:
-            query = update.callback_query
             await query.answer()
             
             if query.data == "back_to_start":
@@ -172,7 +173,7 @@ class TelegramHandlers:
             if "away_win" in odds:
                 message += f"Victoria visitante: {odds['away_win'].get('odds', 'N/A')} ({odds['away_win'].get('bookmaker', 'N/A')})\n"
             
-            # Agregar botón de retorno a la visualización final
+            # Return button for final view
             keyboard = [[InlineKeyboardButton("🔄 Consultar otra liga / partido", callback_data="back_to_start")]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
@@ -180,7 +181,8 @@ class TelegramHandlers:
             return SHOW_PREDICTION
         except Exception as e:
             logger.error(f"Error in select_match handler: {e}")
-            await query.edit_message_text("Ocurrió un error al obtener la predicción.")
+            if query:
+                await query.edit_message_text("Ocurrió un error al obtener la predicción.")
             return SELECT_MATCH
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
