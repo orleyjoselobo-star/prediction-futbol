@@ -58,6 +58,8 @@ data/processed/*
 models/*.pkl
 models/*.joblib
 models/*.h5
+# EXCEPCIÓN: Permitir explícitamente el peso entrenado del bot de fútbol
+!models/xgboost_model.pkl
 
 # Logs
 logs/
