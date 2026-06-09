@@ -48,18 +48,19 @@ SCALER_PATH = BASE_DIR / os.getenv("SCALER_PATH", "models/scaler.pkl")
 MODEL_VERSION = "2.0_XGBOOST"
 MIN_PREDICTION_CONFIDENCE = 0.65
 
-# --- LEAGUE MAPPING & CODES (API-Football IDs for 2026) ---
-SUPPORTED_LEAGUES = {
-    "PL": {"name": "Premier League", "id": 39},
-    "LA": {"name": "La Liga", "id": 140},
-    "SA": {"name": "Serie A", "id": 135},
-    "BL": {"name": "Bundesliga", "id": 78},
-    "FL1": {"name": "Ligue 1", "id": 61},
-    "CAT_A": {"name": "Categoría A Colombia", "id": 288},
-    "CAT_B": {"name": "Categoría B Colombia", "id": 289},
-    "CL": {"name": "UEFA Champions League", "id": 8},
-    "WC": {"name": "World Cup 2026", "id": 1}
+# --- LEAGUE MAPPING & CODES SYNCHRONIZED FOR FOOTBALL-DATA.ORG V4 ---
+# Replaced API-Football numeric IDs with text short codes required by football-data endpoints.
+LEAGUES = {
+    "premier": {"name": "Premier League Inglaterra 🏴󠁧󠁢󠁥󠁮󠁧󠁿", "id": "PL"},
+    "la_liga": {"name": "La Liga España 🇪🇸", "id": "PD"},
+    "serie_a": {"name": "Serie A Italia 🇮🇹", "id": "SA"},
+    "bundesliga": {"name": "Bundesliga Alemania 🇩🇪", "id": "BL1"},
+    "champions": {"name": "UEFA Champions League 🏆", "id": "CL"},
+    "ligue_1": {"name": "Ligue 1 Francia 🇫🇷", "id": "FL1"}
 }
+
+# Kept SUPPORTED_LEAGUES variable active to prevent any import breakage in secondary files
+SUPPORTED_LEAGUES = LEAGUES
 
 # --- LOGGING CONFIGURATION ---
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
