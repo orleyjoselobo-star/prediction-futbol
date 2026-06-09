@@ -54,13 +54,20 @@ async def init_telegram_bot():
     logger.info("Instancia de Telegram configurada e inicializada con éxito.")
     return bot_app
 
-# Forzar la inicialización al importar o arrancar el contenedor
-try:
-    # Google Cloud Run corre sobre entornos donde la inicialización asíncrona se gestiona en el ciclo del webhook
-    loop = asyncio.get_event_loop()
-except RuntimeError:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+def safe_get_loop():
+    """Safely retrieves the running event loop or sets up a new one."""
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        try:
+            return asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            return loop
+
+# Inicialización inicial controlada
+loop = safe_get_loop()
 
 if os.getenv("ENVIRONMENT") == "production":
     telegram_app = loop.run_until_complete(init_telegram_bot())
@@ -77,9 +84,12 @@ def telegram_webhook():
     de Telegram y las procesa dentro del contenedor de Cloud Run.
     """
     global telegram_app
+    current_loop = safe_get_loop()
+
     if not telegram_app:
-        # Inicialización perezosa (lazy initialization) en caso de fallar el arranque previo
-        telegram_app = asyncio.run(init_telegram_bot())
+        # Inicialización perezosa (lazy initialization) usando el ciclo seguro actual sin romperlo
+        logger.info("Ejecutando inicialización tardía en webhook...")
+        telegram_app = current_loop.run_until_complete(init_telegram_bot())
         if not telegram_app:
             return "Bot no inicializado", 500
 
@@ -90,12 +100,12 @@ def telegram_webhook():
             # Convertir el JSON crudo en un objeto Update entendible por la librería
             update = Update.de_json(json_data, telegram_app.bot)
             
-            # Procesar la actualización dentro del ciclo de eventos asíncronos de la app
-            asyncio.run(telegram_app.process_update(update))
+            # Procesar la actualización compartiendo el ciclo de eventos de forma nativa y estable
+            current_loop.run_until_complete(telegram_app.process_update(update))
             
         return "OK", 200
     except Exception as e:
-        logger.error(f"Error procesando update en el Webhook: {e}")
+        logger.error(f"Error procesando update en el Webhook: {e}", exc_info=True)
         return "Error Interno", 500
 
 if __name__ == "__main__":
