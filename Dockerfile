@@ -1,5 +1,6 @@
 # Usamos una imagen ligera de Python oficial
-FROM python:3.10-slim
+
+FROM python:3.11-slim
 
 # Evita que Python escriba archivos .pyc en el disco y fuerza la salida en tiempo real
 ENV PYTHONDONTWRITEBYTECODE=1
