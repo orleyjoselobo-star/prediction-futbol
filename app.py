@@ -7,6 +7,7 @@ import asyncio
 from flask import Flask, request, jsonify
 from telegram import Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ConversationHandler
+from telegram.request import HTTPXRequest
 from src.config.settings import TELEGRAM_BOT_TOKEN
 from src.telegram_bot.handlers import TelegramHandlers, SELECT_LEAGUE, SELECT_MATCH, SHOW_PREDICTION
 from src.logger import setup_logger
@@ -19,7 +20,7 @@ app = Flask(__name__)
 telegram_app = None
 
 async def init_telegram_bot():
-    """Initializes the Telegram application instance and hooks handlers."""
+    """Initializes the Telegram application instance with an optimized connection pool."""
     global telegram_app
     # Leer el token desde tu .env real (TELEGRAM_TOKEN) o el fallback de configuración
     token = os.getenv("TELEGRAM_TOKEN") or TELEGRAM_BOT_TOKEN
@@ -28,10 +29,19 @@ async def init_telegram_bot():
         logger.error("TELEGRAM_TOKEN no configurado en el entorno de ejecución.")
         return None
 
-    logger.info("Inicializando instancia global del Bot de Telegram...")
+    logger.info("Inicializando instancia global del Bot de Telegram con Pool optimizado...")
     
-    # Construir la aplicación del bot
-    bot_app = Application.builder().token(token).build()
+    # Configurar un cliente HTTP asíncrono con pool expandido para evitar Timeouts concurrentes
+    local_request = HTTPXRequest(
+        connection_pool_size=100,      # Eleva de 10 (por defecto) a 100 conexiones simultáneas
+        read_timeout=20.0,             # Margen de espera para respuestas de la API de Telegram
+        write_timeout=20.0,
+        connect_timeout=20.0,
+        pool_timeout=20.0              # Tiempo máximo de espera para conseguir una conexión libre del pool
+    )
+    
+    # Construir la aplicación del bot inyectando el cliente configurado
+    bot_app = Application.builder().token(token).request(local_request).build()
     
     # Instanciar los manejadores conversacionales
     handlers = TelegramHandlers()
@@ -87,7 +97,7 @@ def telegram_webhook():
     current_loop = safe_get_loop()
 
     if not telegram_app:
-        # Inicialización perezosa (lazy initialization) usando el ciclo seguro actual sin romperlo
+        # Inicialización perezosa (lazy initialization) usando el ciclo seguro actual
         logger.info("Ejecutando inicialización tardía en webhook...")
         telegram_app = current_loop.run_until_complete(init_telegram_bot())
         if not telegram_app:
@@ -100,7 +110,7 @@ def telegram_webhook():
             # Convertir el JSON crudo en un objeto Update entendible por la librería
             update = Update.de_json(json_data, telegram_app.bot)
             
-            # Procesar la actualización compartiendo el ciclo de eventos de forma nativa y estable
+            # Procesar la actualización compartiendo el ciclo de eventos de forma nativa
             current_loop.run_until_complete(telegram_app.process_update(update))
             
         return "OK", 200
