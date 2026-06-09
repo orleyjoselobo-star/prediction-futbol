@@ -41,8 +41,9 @@ class MatchPredictor:
         Executes match outcome inference over the input feature matrix.
         Retorna las probabilidades calculadas por el modelo XGBoost o una distribución matemática de respaldo.
         """
+        # Valores por defecto totalmente seguros y equitativos (33.3% para cada escenario)
         prediction_result = {
-            "prediction": "UNKNOWN",
+            "prediction": "DRAW",
             "probabilities": {
                 "HOME_WIN": 0.333,
                 "DRAW": 0.334,
@@ -51,8 +52,9 @@ class MatchPredictor:
         }
 
         try:
-            if feature_df.empty:
-                logger.warning("Se recibió una matriz de características vacía para la predicción.")
+            # Si el DataFrame es nulo o viene completamente vacío, devolvemos base balanceada directamente
+            if feature_df is None or feature_df.empty:
+                logger.warning("Se recibió una matriz de características vacía para la predicción. Retornando baseline balanceado.")
                 return prediction_result
 
             # Aplicar escalado a los datos si el escalador está disponible
@@ -61,12 +63,11 @@ class MatchPredictor:
                 logger.debug("Aplicando transformación de escala a las variables de entrada.")
                 X_scaled = self.scaler.transform(feature_df)
 
-            # Ejecutar la inferencia real si el modelo XGBoost está cargado
+            # --- CASO A: Ejecutar la inferencia real si el modelo XGBoost está cargado ---
             if self.model:
                 logger.info("Ejecutando inferencia en tiempo real con el modelo XGBoost.")
                 
                 # Obtener las probabilidades de cada clase (0: HOME_WIN, 1: DRAW, 2: AWAY_WIN)
-                # Nota: Ajusta los índices según el mapeo exacto con el que entrenaste tu modelo corporativo
                 prob_array = self.model.predict_proba(X_scaled)[0]
                 
                 # Mapear el array resultante al diccionario de salida esperado por el bot
@@ -78,17 +79,24 @@ class MatchPredictor:
                 classes = ["HOME_WIN", "DRAW", "AWAY_WIN"]
                 prediction_result["prediction"] = classes[prob_array.argmax()]
                 
+            # --- CASO B: Lógica analítica de respaldo segura si el archivo .pkl no está ---
             else:
-                # Lógica de respaldo paramétrica si los archivos .pkl no se han cargado en el contenedor
-                logger.info("Usando motor analítico de respaldo (Baseline paramétrico).")
-                form_diff = feature_df.get("form_recent", pd.Series([0.0])).iloc[0]
-                goals_diff = feature_df.get("goals_for", pd.Series([0.0])).iloc[0]
+                logger.info("Usando motor analítico de respaldo seguro (Baseline paramétrico).")
+                
+                # Extracción segura controlando celdas vacías o faltantes para evitar IndexErrors
+                form_diff = 0.0
+                if "form_recent" in feature_df.columns and len(feature_df) > 0:
+                    form_diff = float(feature_df["form_recent"].iloc[0])
+
+                goals_diff = 0.0
+                if "goals_for" in feature_df.columns and len(feature_df) > 0:
+                    goals_diff = float(feature_df["goals_for"].iloc[0])
                 
                 # Simulación matemática basada en las diferencias de fuerza para no romper el flujo del bot
                 base_home = 0.40 + (form_diff * 0.2) + (goals_diff * 0.05)
                 base_away = 0.32 - (form_diff * 0.2) - (goals_diff * 0.05)
                 
-                # Asegurar límites lógicos entre 0 y 1
+                # Asegurar límites lógicos estables entre 0.1 y 0.8
                 base_home = max(0.1, min(0.8, base_home))
                 base_away = max(0.1, min(0.8, base_away))
                 base_draw = 1.0 - base_home - base_away
@@ -104,6 +112,8 @@ class MatchPredictor:
             logger.info(f"Predicción completada con éxito. Resultado más probable: {prediction_result['prediction']}")
 
         except Exception as e:
-            logger.error(f"Error durante la ejecución de la inferencia del modelo: {e}")
+            logger.error(f"Error durante la ejecución de la inferencia del modelo: {e}", exc_info=True)
+            # En caso de cualquier falla imprevista, nos aseguramos de que devuelva el objeto base estructurado
+            return prediction_result
 
         return prediction_result
