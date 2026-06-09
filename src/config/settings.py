@@ -8,16 +8,19 @@ load_dotenv()
 
 # Project Root Paths
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = BASE_DIR / "data"
-MODELS_DIR = BASE_DIR / "models"
-LOGS_DIR = BASE_DIR / "logs"
 
-# Create required infrastructure directories if they don't exist
-for directory in [DATA_DIR, MODELS_DIR, LOGS_DIR]:
-    directory.mkdir(exist_ok=True)
+# Cloud Run safe paths (Using /tmp for dynamic files to prevent PermissionError)
+DATA_DIR = Path("/tmp/data")
+MODELS_DIR = BASE_DIR / "models"  # Kept in base if models are baked into the Docker image
+LOGS_DIR = Path("/tmp/logs")
+
+# Create required infrastructure directories safely (only if they are in /tmp)
+for directory in [DATA_DIR, LOGS_DIR]:
+    directory.mkdir(parents=True, exist_ok=True)
 
 # --- TELEGRAM CONFIGURATION ---
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_TOKEN")
+# Mapped to accept both naming conventions for absolute safety
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 # --- GOOGLE CLOUD & FIREBASE CONFIGURATION ---
