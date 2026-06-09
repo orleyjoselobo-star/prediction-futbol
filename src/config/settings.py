@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # Cloud Run safe paths (Using /tmp for dynamic files to prevent PermissionError)
 DATA_DIR = Path("/tmp/data")
-MODELS_DIR = BASE_DIR / "models"  # Kept in base if models are baked into the Docker image
+MODELS_DIR = BASE_DIR / "models"
 LOGS_DIR = Path("/tmp/logs")
 
 # Create required infrastructure directories safely (only if they are in /tmp)
@@ -19,7 +19,6 @@ for directory in [DATA_DIR, LOGS_DIR]:
     directory.mkdir(parents=True, exist_ok=True)
 
 # --- TELEGRAM CONFIGURATION ---
-# Mapped to accept both naming conventions for absolute safety
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
@@ -49,17 +48,15 @@ MODEL_VERSION = "2.0_XGBOOST"
 MIN_PREDICTION_CONFIDENCE = 0.65
 
 # --- LEAGUE MAPPING & CODES SYNCHRONIZED FOR FOOTBALL-DATA.ORG V4 ---
-# Replaced API-Football numeric IDs with text short codes required by football-data endpoints.
 LEAGUES = {
-    "premier": {"name": "Premier League Inglaterra 🏴󠁧󠁢󠁥󠁮󠁧󠁿", "id": "PL"},
-    "la_liga": {"name": "La Liga España 🇪🇸", "id": "PD"},
-    "serie_a": {"name": "Serie A Italia 🇮🇹", "id": "SA"},
-    "bundesliga": {"name": "Bundesliga Alemania 🇩🇪", "id": "BL1"},
-    "champions": {"name": "UEFA Champions League 🏆", "id": "CL"},
-    "ligue_1": {"name": "Ligue 1 Francia 🇫🇷", "id": "FL1"}
+    "premier": {"name": "Premier League Inglaterra", "id": "PL"},
+    "la_liga": {"name": "La Liga España", "id": "PD"},
+    "serie_a": {"name": "Serie A Italia", "id": "SA"},
+    "bundesliga": {"name": "Bundesliga Alemania", "id": "BL1"},
+    "champions": {"name": "UEFA Champions League", "id": "CL"},
+    "ligue_1": {"name": "Ligue 1 Francia", "id": "FL1"}
 }
 
-# Kept SUPPORTED_LEAGUES variable active to prevent any import breakage in secondary files
 SUPPORTED_LEAGUES = LEAGUES
 
 # --- LOGGING CONFIGURATION ---
