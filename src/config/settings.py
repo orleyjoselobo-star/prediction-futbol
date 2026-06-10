@@ -48,14 +48,20 @@ GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
 GCP_SA_KEY = os.getenv("GCP_SA_KEY")
 
 # --- LEAGUE MAPPING ---
-# Códigos sincronizados para football-data.org V4
+# Códigos sincronizados para football-data.org V4 (Todas las 12 competiciones gratuitas)
 LEAGUES = {
     "premier": {"name": "Premier League", "id": "PL"},
+    "championship": {"name": "Championship", "id": "ELC"},
     "la_liga": {"name": "La Liga", "id": "PD"},
     "serie_a": {"name": "Serie A", "id": "SA"},
     "bundesliga": {"name": "Bundesliga", "id": "BL1"},
+    "ligue_1": {"name": "Ligue 1", "id": "FL1"},
+    "eredivisie": {"name": "Eredivisie", "id": "DED"},
+    "primeira_liga": {"name": "Primeira Liga", "id": "PPL"},
+    "brasileirao": {"name": "Brasileirão Série A", "id": "BSA"},
     "champions": {"name": "UEFA Champions League", "id": "CL"},
-    "ligue_1": {"name": "Ligue 1", "id": "FL1"}
+    "eurocopa": {"name": "Eurocopa", "id": "EC"},
+    "mundial": {"name": "Copa del Mundo", "id": "WC"}
 }
 
 # Alias para compatibilidad
