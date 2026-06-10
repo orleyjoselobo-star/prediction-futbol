@@ -56,10 +56,24 @@ class TelegramHandlers:
 
             keyboard = []
             for match in matches[:6]:
-                # Limpiamos nombres para que los guiones bajos no rompan el callback de Telegram
-                home = match['homeTeam']['name'][:12].replace("_", " ")
-                away = match['awayTeam']['name'][:12].replace("_", " ")
-                callback = f"match_{match['id']}_{home}_{away}"
+                # 1. Extracción segura de la fecha (Formato de API suele ser 'YYYY-MM-DDTHH:MM:SSZ')
+                raw_date = match.get('utcDate', '')
+                match_date = "Por definir"
+                if raw_date:
+                    try:
+                        # Extraemos YYYY-MM-DD y lo invertimos a DD-MM-YYYY para el callback
+                        date_part = raw_date.split('T')[0]
+                        year, month, day = date_part.split('-')
+                        match_date = f"{day}-{month}-{year}"
+                    except Exception:
+                        pass
+
+                # 2. Limpiamos nombres asegurando no superar el límite de 64 bytes de Telegram
+                home = match['homeTeam']['name'][:10].replace("_", " ")
+                away = match['awayTeam']['name'][:10].replace("_", " ")
+                
+                # 3. Incluimos la fecha en el callback_data
+                callback = f"match_{match['id']}_{home}_{away}_{match_date}"
                 keyboard.append([InlineKeyboardButton(f"{home} vs {away}", callback_data=callback)])
             
             keyboard.append([InlineKeyboardButton("🔙 Volver al menú", callback_data="back_leagues")])
@@ -75,9 +89,13 @@ class TelegramHandlers:
         await query.answer()
         
         try:
+            # Extraemos los datos del botón
             parts = query.data.split("_")
             home_team = parts[2]
             away_team = parts[3]
+            
+            # Recuperamos la fecha y cambiamos los guiones por barras (DD/MM/AAAA)
+            match_date = parts[4].replace("-", "/") if len(parts) > 4 else "Por definir"
             
             await query.edit_message_text(f"🤖 Analizando {home_team} vs {away_team}...")
 
@@ -93,7 +111,7 @@ class TelegramHandlers:
                 probs = {"HOME_WIN": 0.45, "DRAW": 0.30, "AWAY_WIN": 0.25}
                 outcome = "HOME_WIN"
 
-            # Traducción visual del resultado con nombres de equipos dinámicos
+            # Traducción visual del resultado con nombres dinámicos
             if outcome == "HOME_WIN":
                 resultado_texto = f"Gana {home_team} 🏠"
             elif outcome == "DRAW":
@@ -101,9 +119,10 @@ class TelegramHandlers:
             else:
                 resultado_texto = f"Gana {away_team} 🚀"
 
-            # --- FORMATO HTML SEGURO ---
+            # --- FORMATO HTML SEGURO CON FECHA ---
             reporte = (
                 f"📊 <b>REPORTE PREDICTIVO</b>\n"
+                f"📅 <b>Fecha:</b> {match_date}\n"
                 f"⚔️ {home_team} vs {away_team}\n\n"
                 f"🔮 <b>Predicción:</b> {resultado_texto}\n\n"
                 f"📈 <b>Probabilidades:</b>\n"
