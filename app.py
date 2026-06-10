@@ -21,7 +21,7 @@ if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "your_telegram_bot_token_here
     logger.error("CRÍTICO: Token de Telegram no encontrado en las variables de entorno.")
     raise ValueError("Falta el TELEGRAM_BOT_TOKEN. Verifica la configuración de Cloud Run.")
 
-# Construimos la app de Telegram fuera de las rutas de forma persistente
+# Construimos la app de Telegram de forma persistente
 bot_app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
 conv_handler = ConversationHandler(
     entry_points=[CommandHandler("start", handlers.start)],
@@ -41,13 +41,24 @@ def health_check():
 
 @app.route("/webhook", methods=["POST"])
 def telegram_webhook():
-    """Recibe el update y lo procesa de forma síncrona para Cloud Run."""
+    """Recibe el update y lo procesa creando un loop seguro para el hilo actual."""
     try:
         json_data = request.get_json(force=True)
         update = Update.de_json(json_data, bot_app.bot)
         
-        # Procesamos el update usando el loop nativo del worker para evitar timeouts
-        asyncio.get_event_loop().run_until_complete(bot_app.process_update(update))
+        # --- SOLUCIÓN AL ERROR DE HILOS ---
+        # 1. Creamos un loop completamente nuevo y aislado para este hilo de Flask
+        loop = asyncio.new_event_loop()
+        
+        # 2. Lo establecemos como el loop principal de este hilo
+        asyncio.set_event_loop(loop)
+        
+        # 3. Ejecutamos la tarea asíncrona hasta que termine
+        loop.run_until_complete(bot_app.process_update(update))
+        
+        # 4. Cerramos el loop para liberar la memoria del contenedor
+        loop.close()
+        # ----------------------------------
         
         return "OK", 200
     except Exception as e:
