@@ -93,13 +93,13 @@ class TelegramHandlers:
                 probs = {"HOME_WIN": 0.45, "DRAW": 0.30, "AWAY_WIN": 0.25}
                 outcome = "HOME_WIN"
 
-            # Traducción visual del resultado
+            # Traducción visual del resultado con nombres de equipos dinámicos
             if outcome == "HOME_WIN":
-                resultado_texto = "Gana Local 🏠"
+                resultado_texto = f"Gana {home_team} 🏠"
             elif outcome == "DRAW":
                 resultado_texto = "Empate 🤝"
             else:
-                resultado_texto = "Gana Visitante 🚀"
+                resultado_texto = f"Gana {away_team} 🚀"
 
             # --- FORMATO HTML SEGURO ---
             reporte = (
@@ -107,9 +107,9 @@ class TelegramHandlers:
                 f"⚔️ {home_team} vs {away_team}\n\n"
                 f"🔮 <b>Predicción:</b> {resultado_texto}\n\n"
                 f"📈 <b>Probabilidades:</b>\n"
-                f"• Local: <code>{probs.get('HOME_WIN', 0)*100:.1f}%</code>\n"
+                f"• Local ({home_team}): <code>{probs.get('HOME_WIN', 0)*100:.1f}%</code>\n"
                 f"• Empate: <code>{probs.get('DRAW', 0)*100:.1f}%</code>\n"
-                f"• Visitante: <code>{probs.get('AWAY_WIN', 0)*100:.1f}%</code>"
+                f"• Visitante ({away_team}): <code>{probs.get('AWAY_WIN', 0)*100:.1f}%</code>"
             )
             
             keyboard = [[InlineKeyboardButton("🔙 Volver al menú", callback_data="back_leagues")]]
