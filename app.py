@@ -3,56 +3,48 @@ import os
 import asyncio
 from flask import Flask, request, jsonify
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ConversationHandler
-from src.telegram_bot.handlers import TelegramHandlers, SELECT_LEAGUE, SELECT_MATCH
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler
+from src.telegram_bot.handlers import TelegramHandlers
 from src.logger import setup_logger
 
-# Importamos el token de forma segura desde tus configuraciones
+# Importamos el token de forma segura
 from src.config.settings import TELEGRAM_BOT_TOKEN
 
 logger = setup_logger(__name__)
 app = Flask(__name__)
 
-# Validación estricta para evitar caídas del contenedor
+# Validación estricta
 if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "your_telegram_bot_token_here":
     logger.error("CRÍTICO: Token de Telegram no encontrado en las variables de entorno.")
-    raise ValueError("Falta el TELEGRAM_BOT_TOKEN. Verifica la configuración de Cloud Run.")
+    raise ValueError("Falta el TELEGRAM_BOT_TOKEN.")
 
 @app.route("/", methods=["GET"])
 def health_check():
-    """Endpoint básico para que Google Cloud Run verifique que el servicio vive."""
+    """Endpoint básico de salud."""
     return jsonify({"status": "healthy"}), 200
 
 @app.route("/webhook", methods=["POST"])
 def telegram_webhook():
-    """Recibe el update y lo procesa creando un loop y aplicación segura para el hilo actual."""
+    """Recibe el update y lo procesa con rutas sin estado (Serverless friendly)."""
     try:
         json_data = request.get_json(force=True)
 
         async def process_update_safely():
-            # 1. Construimos la aplicación de Telegram localmente en esta función
-            # para que se vincule perfectamente al Event Loop actual sin chocar con otros hilos.
             handlers = TelegramHandlers()
             bot_app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
             
-            conv_handler = ConversationHandler(
-                entry_points=[CommandHandler("start", handlers.start)],
-                states={
-                    SELECT_LEAGUE: [CallbackQueryHandler(handlers.select_league, pattern='^league_')],
-                    SELECT_MATCH: [CallbackQueryHandler(handlers.select_match, pattern='^match_')],
-                },
-                fallbacks=[CommandHandler("cancel", handlers.cancel)],
-                per_message=False
-            )
-            bot_app.add_handler(conv_handler)
-
-            # 2. El bloque 'async with' ejecuta internamente bot_app.initialize() y bot_app.shutdown()
-            # Esto resuelve de raíz el RuntimeError de inicialización.
+            # --- SOLUCIÓN: MANEJADORES DIRECTOS (SIN AMNESIA) ---
+            # Enlazamos los botones directamente a sus funciones usando expresiones regulares
+            bot_app.add_handler(CommandHandler("start", handlers.start))
+            bot_app.add_handler(CallbackQueryHandler(handlers.select_league, pattern='^league_'))
+            bot_app.add_handler(CallbackQueryHandler(handlers.select_match, pattern='^match_'))
+            bot_app.add_handler(CallbackQueryHandler(handlers.start, pattern='^back_leagues'))
+            
             async with bot_app:
                 update = Update.de_json(json_data, bot_app.bot)
                 await bot_app.process_update(update)
 
-        # 3. Creamos el loop para este hilo, corremos la tarea y lo cerramos.
+        # Ejecución asíncrona aislada para evitar conflictos de hilos
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(process_update_safely())
